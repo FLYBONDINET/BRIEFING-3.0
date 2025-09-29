@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Briefing — Arribos & Salidas</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <img src="assets/logo.png" class="logo" alt="logo">
+      <div>
+        <h1>Briefing — Arribos & Salidas</h1>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="refresh-btn" id="btnRefresh">Actualizar</button>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="arribos" role="tab" aria-selected="true">Arribos</button>
+    <button class="tab" data-tab="salidas" role="tab" aria-selected="false">Salidas</button>
+    <button class="tab" data-tab="historial" role="tab" aria-selected="false">Historial</button>
+  </div>
+
+  <div class="container">
+    <section class="card" id="cardArribos" role="tabpanel" aria-labelledby="Arribos">
+      <strong>Arribos</strong>
+      <div class="table-wrap">
+        <table id="tblArribos"><thead></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <section class="card" id="cardSalidas" role="tabpanel" aria-labelledby="Salidas" style="display:none">
+      <strong>Salidas</strong>
+      <div class="table-wrap">
+        <table id="tblSalidas"><thead></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <section class="card" id="cardHistorial" role="tabpanel" aria-labelledby="Historial" style="display:none">
+      <div class="row">
+        <strong>Historial</strong>
+        <input type="text" id="searchInput" placeholder="Buscar vuelo o matrícula...">
+      </div>
+      <div class="table-wrap">
+        <table id="tblHistorial"><thead></thead><tbody></tbody></table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+
+<!-- JSONP para evitar CORS -->
+<script>
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzr8D4fe4eWYsbR-q62dWDqZVjsctso2jMoH874nsLNtLwi1wsw_04ye_KtA4fwW13hgw/exec";
+  function handleGASData(rows){
+    window.__GAS_ROWS__ = rows || [];
+    if (window.__loadFromJSONP) window.__loadFromJSONP(window.__GAS_ROWS__);
+  }
+  (function injectJSONP(){
+    const s = document.createElement('script');
+    s.src = GAS_URL + "?callback=handleGASData&_ts=" + Date.now();
+    document.body.appendChild(s);
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+:root{
+  --fb-yellow:#ffd200;
+  --ok:#2ecc71;
+  --nok:#e74c3c;
+  --delay:#f39c12;
+  --cyan:#06b6d4;
+  --border:#e5e7eb;
+}
+
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#fafafa;
+  color:#111;
+}
+
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+
+header{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-bottom:12px;
+  text-align:center; /* centra encabezado */
+}
+
+.brand{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:center; /* centra logo + título */
+}
+
+.logo{
+  width:44px;
+  height:44px;
+  object-fit:contain;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:#fff;
+  padding:4px;
+}
+
+.refresh-btn{
+  background:var(--fb-yellow);
+  border:0;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.tabs{
+  display:flex;
+  justify-content:center; /* centra pestañas */
+  border-bottom:2px solid var(--border);
+  margin:8px 0;
+}
+.tab{
+  padding:10px 14px;
+  cursor:pointer;
+  border-bottom:3px solid transparent;
+  font-weight:600;
+  text-align:center;
+}
+.tab.active{border-color:var(--fb-yellow)}
+
+.container{display:grid;gap:12px}
+.card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:10px;
+  text-align:center; /* centra título dentro de la card */
+}
+
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--border);
+  border-radius:10px;
+}
+
+/* === TABLAS CENTRADAS === */
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:.95rem;
+  text-align:center;
+}
+thead th, tbody td{
+  text-align:center;
+  vertical-align:middle;
+  padding:8px;
+  border-bottom:1px solid var(--border);
+}
+tbody td:first-child strong{
+  display:inline-block;
+  text-align:center;
+}
+
+/* === BADGES base === */
+.badge{
+  display:inline-block;
+  min-width:100px;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:.85rem;
+  border:1px solid var(--border);
+  background:transparent;
+  text-align:center;
+}
+
+/* Estados (Arribos + Salidas) */
+.badge.aterrizado{
+  background:rgba(46,204,113,.18);      /* verde */
+  border-color:rgba(46,204,113,.45);
+}
+.badge.en-vuelo{
+  background:rgba(6,182,212,.18);       /* cian */
+  border-color:rgba(6,182,212,.45);
+}
+/* A CONFIRMAR => sin clase, queda transparente */
+
+/* COMBU / BINGO */
+.badge.ok{
+  background:rgba(46,204,113,.18);      /* verde */
+  border-color:rgba(46,204,113,.45);
+}
+.badge.no-ok{
+  background:rgba(231,76,60,.18);       /* rojo */
+  border-color:rgba(231,76,60,.45);
+}
+
+/* Informe de DELAY (Salidas) */
+.badge.delay-warn{
+  background:rgba(255,193,7,.20);       /* naranja-amarillento */
+  border-color:rgba(255,193,7,.45);
+}
+.badge.delay-ok{
+  background:rgba(46,204,113,.18);      /* verde */
+  border-color:rgba(46,204,113,.45);
+}
+
+/* Misceláneo */
+.row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:6px;
+}
+#searchInput{
+  width:260px;
+  max-width:100%;
+  padding:8px;
+  border:1px solid var(--border);
+  border-radius:10px;
+}
