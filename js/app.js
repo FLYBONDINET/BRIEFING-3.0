@@ -1,8 +1,6 @@
 /* App UI — Arribos & Salidas (JSONP)
-   - ARRIBOS: muestra columnas A,C,D,B,F,I,G en este orden:
-     Matrícula, Vuelo, Origen, ETA, POS/CINTA, Estado de vuelo, ETA TAMS
-   - SALIDAS: muestra columnas J,L,M,K,N,O,P,V,Q,R,S en este orden:
-     Matrícula, Vuelo, Destino, ETD, Apertura, Cierre, POS/PUERTA, Estado de vuelo, COMBU, BINGO, Informe de DELAY
+   - ARRIBOS: A,C,D,B,F,I,G  -> Matrícula, Vuelo, Origen, ETA, POS/CINTA, Estado de vuelo, ETA TAMS
+   - SALIDAS: J,L,M,K,N,O,P,V,Q,R,S -> Matrícula, Vuelo, Destino, ETD, Apertura, Cierre, POS/PUERTA, Estado de vuelo, COMBU, BINGO, Informe de DELAY
 */
 
 const $  = (sel) => document.querySelector(sel);
@@ -23,7 +21,7 @@ const cardHistorial= $("#cardHistorial");
 let CURRENT_DATA = [];
 
 /* ===========================
-   ARRIBOS — encabezado/filas
+   ARRIBOS
    =========================== */
 function buildHeadArribos(table){
   table.querySelector("thead").innerHTML = `
@@ -38,13 +36,10 @@ function buildHeadArribos(table){
     </tr>`;
 }
 function badgeEstadoArribo(v){
-  // Para Arribos también respetamos colores:
-  // ATERRIZADO => verde, EN VUELO => cian, A CONFIRMAR => sin color
   const t = String(v||'').trim().toUpperCase();
   let cls = '';
   if (t === 'ATERRIZADO') cls = 'aterrizado';
   else if (t === 'EN VUELO') cls = 'en-vuelo';
-  // A CONFIRMAR => sin clase
   return `<span class="badge ${cls}">${v||''}</span>`;
 }
 function rowHtmlArribo(r){
@@ -60,7 +55,7 @@ function rowHtmlArribo(r){
 }
 
 /* ===========================
-   SALIDAS — encabezado/filas
+   SALIDAS
    =========================== */
 function buildHeadSalidas(table){
   table.querySelector("thead").innerHTML = `
@@ -78,12 +73,10 @@ function buildHeadSalidas(table){
       <th>Informe de DELAY</th>
     </tr>`;
 }
-// badges de Salidas según tus reglas
 function badgeEstadoSalida(v){
   const t = String(v||'').trim().toUpperCase();
   let cls = '';
-  if (t === 'EN VUELO') cls = 'en-vuelo';
-  // A CONFIRMAR => sin clase/color
+  if (t === 'EN VUELO') cls = 'en-vuelo'; // A CONFIRMAR => sin color
   return `<span class="badge ${cls}">${v||''}</span>`;
 }
 function badgeOkNoOk(v){
@@ -117,26 +110,24 @@ function rowHtmlSalida(r){
 }
 
 /* ===========================
-   RENDER + BUSCADOR
+   Render & Search
    =========================== */
 function renderAll(data){
   const arr = data.filter(d => (d['Tipo']||'').toLowerCase() === 'arribo');
   const sal = data.filter(d => (d['Tipo']||'').toLowerCase() === 'salida');
 
-  // ARRIBOS
   buildHeadArribos(tblArribos);
   tblArribos.querySelector("tbody").innerHTML = arr.map(rowHtmlArribo).join("");
 
-  // SALIDAS
   buildHeadSalidas(tblSalidas);
   tblSalidas.querySelector("tbody").innerHTML = sal.map(rowHtmlSalida).join("");
 
-  // HISTORIAL (usá el que prefieras; acá muestro todo con formato de Salidas)
+  // Historial: acá uso el formato de Salidas para ver todo junto; cambiá si querés
   buildHeadSalidas(tblHistorial);
   tblHistorial.querySelector("tbody").innerHTML = data.map(rowHtmlSalida).join("");
 }
 
-// Recibe datos del JSONP del Apps Script
+// JSONP hook
 window.__loadFromJSONP = (rows)=>{
   CURRENT_DATA = Array.isArray(rows) ? rows : [];
   renderAll(CURRENT_DATA);
@@ -166,3 +157,10 @@ tabs.forEach(t => t.addEventListener("click", () => {
   cardSalidas.style.display   = tab==="salidas"   ? "" : "none";
   cardHistorial.style.display = tab==="historial" ? "" : "none";
 }));
+
+// ===== Bootstrap por si el JSONP llegó antes que app.js (Chrome móvil) =====
+if (Array.isArray(window.__GAS_ROWS__) && window.__GAS_ROWS__.length) {
+  window.__loadFromJSONP(window.__GAS_ROWS__);
+} else {
+  // si no llegaron aún, el callback handleGASData disparará __loadFromJSONP cuando lleguen
+}
