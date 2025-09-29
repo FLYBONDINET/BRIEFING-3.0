@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Briefing — Arribos & Salidas</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -53,19 +56,56 @@
   </div>
 </div>
 
-<script src="js/app.js"></script>
+<!-- Tu app de UI -->
+<script src="js/app.js" defer></script>
 
-<!-- JSONP para evitar CORS -->
+<!-- JSONP para evitar CORS (robusto para móvil) -->
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzr8D4fe4eWYsbR-q62dWDqZVjsctso2jMoH874nsLNtLwi1wsw_04ye_KtA4fwW13hgw/exec";
+  // callback global que el Apps Script invoca: tu app.js lo consume si ya está cargado
   function handleGASData(rows){
     window.__GAS_ROWS__ = rows || [];
     if (window.__loadFromJSONP) window.__loadFromJSONP(window.__GAS_ROWS__);
   }
-  (function injectJSONP(){
-    const s = document.createElement('script');
-    s.src = GAS_URL + "?callback=handleGASData&_ts=" + Date.now();
-    document.body.appendChild(s);
+</script>
+<script>
+  (function(){
+    // Usá SIEMPRE la URL /exec pública de tu implementación
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzr8D4fe4eWYsbR-q62dWDqZVjsctso2jMoH874nsLNtLwi1wsw_04ye_KtA4fwW13hgw/exec";
+
+    let tries = 0, maxTries = 3, loaded = false;
+
+    // Aviso liviano (visible en móvil si hay problemas de red)
+    const note = document.createElement('div');
+    note.id = "net-note";
+    note.style.cssText = "margin:8px 0;padding:8px;text-align:center;font-size:.9rem;color:#444;display:none;";
+    document.body.appendChild(note);
+
+    function inject(){
+      tries++;
+      note.style.display = "";
+      note.textContent = "Cargando datos… (intento " + tries + "/" + maxTries + ")";
+      const s = document.createElement('script');
+      s.async = true;
+      // cache-buster para evitar versiones cacheadas en celular
+      s.src = GAS_URL + "?callback=handleGASData&_ts=" + Date.now();
+      s.onerror = () => {
+        if (!loaded && tries < maxTries) {
+          setTimeout(inject, 900);
+        } else if (!loaded) {
+          note.textContent = "No pude cargar datos. Verificá que el Web App esté público (Cualquiera con el enlace) y recargá.";
+        }
+      };
+      s.onload = () => {
+        loaded = true;
+        note.style.display = "none";
+      };
+      document.body.appendChild(s);
+    }
+
+    // 3 intentos espaciados para cubrir redes móviles inestables
+    inject();
+    setTimeout(() => { if (!loaded && tries < maxTries) inject(); }, 2000);
+    setTimeout(() => { if (!loaded && tries < maxTries) inject(); }, 4000);
   })();
 </script>
 </body>
