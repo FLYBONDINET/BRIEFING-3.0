@@ -38,9 +38,12 @@ function buildHeadArribos(table){
 function badgeEstadoArribo(v){
   const t = String(v||'').trim().toUpperCase();
   let cls = '';
-  if (t === 'ATERRIZADO') cls = 'aterrizado';
-  else if (t === 'EN VUELO') cls = 'en-vuelo';
-  return `<span class="badge ${cls}">${v||''}</span>`;
+  let icon = '';
+  if (t === 'ATERRIZADO') { cls = 'aterrizado'; icon = '🛬'; }
+  else if (t === 'EN VUELO') { cls = 'en-vuelo'; }
+  else if (t === 'EN TIERRA') { cls = 'en-tierra'; icon = '✈️<span class="ground">▬</span>'; }
+  else if (t === 'DESPEGADO') { cls = 'despegado'; icon = '🛫'; }
+  return `<span class="badge ${cls}">${icon} ${v||''}</span>`;
 }
 function rowHtmlArribo(r){
   const micros = String(r['Micros']||'').toUpperCase().includes('MICRO');
@@ -77,8 +80,12 @@ function buildHeadSalidas(table){
 function badgeEstadoSalida(v){
   const t = String(v||'').trim().toUpperCase();
   let cls = '';
-  if (t === 'EN VUELO') cls = 'en-vuelo'; // A CONFIRMAR => sin color
-  return `<span class="badge ${cls}">${v||''}</span>`;
+  let icon = '';
+  if (t === 'EN VUELO') { cls = 'en-vuelo'; }
+  else if (t === 'EN TIERRA') { cls = 'en-tierra'; icon = '✈️<span class="ground">▬</span>'; }
+  else if (t === 'ATERRIZADO') { cls = 'aterrizado'; icon = '🛬'; }
+  else if (t === 'EN VUELO') { cls = 'despegado'; icon = '🛫'; }
+  return `<span class="badge ${cls}">${icon} ${v||''}</span>`;
 }
 function badgeOkNoOk(v){
   const t = String(v||'').trim().toUpperCase();
