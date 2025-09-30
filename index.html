@@ -12,6 +12,12 @@
     .controls{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
     .date-input{padding:8px;border:1px solid var(--border);border-radius:10px}
     .apply-btn{background:#111;color:#fff;border:0;padding:8px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+
+    /* Leyenda y pintado del vuelo (MICROS) */
+    .legend{display:none;gap:12px;align-items:center;justify-content:center;font-size:.9rem;margin-top:6px}
+    .legend .sw{display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid var(--border);margin-right:6px;vertical-align:middle}
+    .legend .micro{background:rgba(139,92,246,.16);border-color:rgba(139,92,246,.35)}
+    .micro-cell{background:rgba(139,92,246,.16);border:1px solid rgba(139,92,246,.35);border-radius:6px;padding:4px 8px;font-weight:700}
   </style>
 </head>
 <body>
@@ -26,30 +32,34 @@
       <button class="apply-btn" id="btnAplicarFecha">Aplicar fecha</button>
       <button class="refresh-btn" id="btnRefresh">Actualizar</button>
     </div>
+    <!-- Leyenda: visible solo en Arribos -->
+    <div class="legend" id="legendMicros">
+      <span><span class="sw micro"></span>vuelo pintado requiere traslado de pasajeros ato-ato</span>
+    </div>
   </header>
 
   <div class="tabs" role="tablist">
-    <button class="tab active" data-tab="arribos">Arribos</button>
-    <button class="tab" data-tab="salidas">Salidas</button>
-    <button class="tab" data-tab="historial">Historial</button>
+    <button class="tab active" data-tab="arribos" role="tab" aria-selected="true">Arribos</button>
+    <button class="tab" data-tab="salidas" role="tab" aria-selected="false">Salidas</button>
+    <button class="tab" data-tab="historial" role="tab" aria-selected="false">Historial</button>
   </div>
 
   <div class="container">
-    <section class="card" id="cardArribos">
+    <section class="card" id="cardArribos" role="tabpanel" aria-labelledby="Arribos">
       <strong>Arribos</strong>
       <div class="table-wrap">
         <table id="tblArribos"><thead></thead><tbody></tbody></table>
       </div>
     </section>
 
-    <section class="card" id="cardSalidas" style="display:none">
+    <section class="card" id="cardSalidas" role="tabpanel" aria-labelledby="Salidas" style="display:none">
       <strong>Salidas</strong>
       <div class="table-wrap">
         <table id="tblSalidas"><thead></thead><tbody></tbody></table>
       </div>
     </section>
 
-    <section class="card" id="cardHistorial" style="display:none">
+    <section class="card" id="cardHistorial" role="tabpanel" aria-labelledby="Historial" style="display:none">
       <div class="row">
         <strong>Historial</strong>
         <input type="text" id="searchInput" placeholder="Buscar vuelo o matrícula...">
@@ -64,14 +74,13 @@
 <script src="js/app.js" defer></script>
 
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzJzfLbZWUUXGo94Lo8VTADQCgE9d_NCmpson6SUB7zamQvkOigrQUjFdKQ2CAeT7PsKQ/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzuk6cEA3QYUH5FS8bgCf8prMwje5FOtnYvIUKNE2XhjGGE0578OPpKnTDSdUAdox-y/exec";
 
   function handleGASData(rows){
     window.__GAS_ROWS__ = rows || [];
     if (window.__loadFromJSONP) window.__loadFromJSONP(window.__GAS_ROWS__);
   }
 
-  // ✅ callback de update: muestra el valor exacto de A1
   function handleGASUpdate(res){
     if (res && res.ok) {
       alert("Fecha aplicada en A1: " + (res.set || ""));
@@ -99,6 +108,8 @@
     const inputFecha = document.getElementById('inputFecha');
     const btnAplicar = document.getElementById('btnAplicarFecha');
     const btnRefresh = document.getElementById('btnRefresh');
+    const legendMicros = document.getElementById('legendMicros');
+    const tabs = document.querySelectorAll('.tab');
 
     btnAplicar.addEventListener('click', function(){
       const val = inputFecha.value;
@@ -108,8 +119,23 @@
 
     btnRefresh?.addEventListener('click', requestGAS);
 
+    // Toggle de pestañas y leyenda
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
+        const selected = tab.dataset.tab;
+        document.getElementById('card' + selected.charAt(0).toUpperCase() + selected.slice(1)).style.display = '';
+
+        // Mostrar leyenda solo en Arribos
+        legendMicros.style.display = (selected === 'arribos') ? 'flex' : 'none';
+      });
+    });
+
     requestGAS();
-    setInterval(requestGAS, 120000); // auto-refresh cada 2 min
+    setInterval(requestGAS, 120000);
   });
 </script>
 </body>

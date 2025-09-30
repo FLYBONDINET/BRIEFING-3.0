@@ -1,5 +1,5 @@
 /* App UI — Arribos & Salidas (JSONP)
-   - ARRIBOS: A,C,D,B,F,I,G  -> Matrícula, Vuelo, Origen, ETA, POS/CINTA, Estado de vuelo, ETA TAMS
+   - ARRIBOS: A,C,D,B,F,I,G (+ Micros desde E) -> Matrícula, Vuelo, Origen, ETA, POS/CINTA, Estado de vuelo, ETA TAMS
    - SALIDAS: J,L,M,K,N,O,P,V,Q,R,S -> Matrícula, Vuelo, Destino, ETD, Apertura, Cierre, POS/PUERTA, Estado de vuelo, COMBU, BINGO, Informe de DELAY
 */
 
@@ -43,9 +43,10 @@ function badgeEstadoArribo(v){
   return `<span class="badge ${cls}">${v||''}</span>`;
 }
 function rowHtmlArribo(r){
+  const micros = String(r['Micros']||'').toUpperCase().includes('MICRO');
   return `<tr>
     <td><strong>${r['Matrícula']||''}</strong></td>
-    <td>${r['Vuelo']||''}</td>
+    <td class="${micros ? 'micro-cell' : ''}">${r['Vuelo']||''}</td>
     <td>${r['Origen']||''}</td>
     <td>${r['ETA']||''}</td>
     <td>${r['POS/CINTA']||''}</td>
@@ -94,6 +95,7 @@ function badgeDelay(v){
   return `<span class="badge ${cls}">${v||''}</span>`;
 }
 function rowHtmlSalida(r){
+  // No hay "Micros" para Salidas (viene de E en Arribos)
   return `<tr>
     <td><strong>${r['Matrícula']||''}</strong></td>
     <td>${r['Vuelo']||''}</td>
@@ -122,9 +124,37 @@ function renderAll(data){
   buildHeadSalidas(tblSalidas);
   tblSalidas.querySelector("tbody").innerHTML = sal.map(rowHtmlSalida).join("");
 
-  // Historial: acá uso el formato de Salidas para ver todo junto; cambiá si querés
-  buildHeadSalidas(tblHistorial);
-  tblHistorial.querySelector("tbody").innerHTML = data.map(rowHtmlSalida).join("");
+  // Historial: muestro todo con la estructura de Salidas salvo el campo “Vuelo” que, si trae Micros, lo pinto
+  tblHistorial.querySelector("thead").innerHTML = tblSalidas.querySelector("thead").innerHTML;
+  tblHistorial.querySelector("tbody").innerHTML = data.map(r => {
+    const micros = String(r['Micros']||'').toUpperCase().includes('MICRO');
+    const vueloCell = `<td class="${micros ? 'micro-cell' : ''}">${r['Vuelo']||''}</td>`;
+    if ((r['Tipo']||'').toLowerCase() === 'salida') {
+      return `<tr>
+        <td><strong>${r['Matrícula']||''}</strong></td>
+        ${vueloCell}
+        <td>${r['Destino']||''}</td>
+        <td>${r['ETD']||''}</td>
+        <td>${r['Apertura']||''}</td>
+        <td>${r['Cierre']||''}</td>
+        <td>${r['POS/PUERTA']||''}</td>
+        <td>${badgeEstadoSalida(r['Estado de vuelo'])}</td>
+        <td>${badgeOkNoOk(r['COMBU'])}</td>
+        <td>${badgeOkNoOk(r['BINGO'])}</td>
+        <td>${badgeDelay(r['Informe de DELAY'])}</td>
+      </tr>`;
+    } else {
+      return `<tr>
+        <td><strong>${r['Matrícula']||''}</strong></td>
+        ${vueloCell}
+        <td>${r['Origen']||''}</td>
+        <td>${r['ETA']||''}</td>
+        <td>${r['POS/CINTA']||''}</td>
+        <td>${badgeEstadoArribo(r['Estado de vuelo'])}</td>
+        <td>${r['ETA TAMS']||''}</td>
+      </tr>`;
+    }
+  }).join("");
 }
 
 // JSONP hook
@@ -145,7 +175,35 @@ if (searchInput){
       String(r['Origen']||'').toLowerCase().includes(q) ||
       String(r['Destino']||'').toLowerCase().includes(q)
     );
-    tblHistorial.querySelector("tbody").innerHTML = filtered.map(rowHtmlSalida).join("");
+    tblHistorial.querySelector("tbody").innerHTML = filtered.map(r => {
+      const micros = String(r['Micros']||'').toUpperCase().includes('MICRO');
+      const vueloCell = `<td class="${micros ? 'micro-cell' : ''}">${r['Vuelo']||''}</td>`;
+      if ((r['Tipo']||'').toLowerCase() === 'salida') {
+        return `<tr>
+          <td><strong>${r['Matrícula']||''}</strong></td>
+          ${vueloCell}
+          <td>${r['Destino']||''}</td>
+          <td>${r['ETD']||''}</td>
+          <td>${r['Apertura']||''}</td>
+          <td>${r['Cierre']||''}</td>
+          <td>${r['POS/PUERTA']||''}</td>
+          <td>${badgeEstadoSalida(r['Estado de vuelo'])}</td>
+          <td>${badgeOkNoOk(r['COMBU'])}</td>
+          <td>${badgeOkNoOk(r['BINGO'])}</td>
+          <td>${badgeDelay(r['Informe de DELAY'])}</td>
+        </tr>`;
+      } else {
+        return `<tr>
+          <td><strong>${r['Matrícula']||''}</strong></td>
+          ${vueloCell}
+          <td>${r['Origen']||''}</td>
+          <td>${r['ETA']||''}</td>
+          <td>${r['POS/CINTA']||''}</td>
+          <td>${badgeEstadoArribo(r['Estado de vuelo'])}</td>
+          <td>${r['ETA TAMS']||''}</td>
+        </tr>`;
+      }
+    }).join("");
   });
 }
 
@@ -158,9 +216,7 @@ tabs.forEach(t => t.addEventListener("click", () => {
   cardHistorial.style.display = tab==="historial" ? "" : "none";
 }));
 
-// ===== Bootstrap por si el JSONP llegó antes que app.js (Chrome móvil) =====
+// Bootstrap por si JSONP llegó antes (Chrome móvil)
 if (Array.isArray(window.__GAS_ROWS__) && window.__GAS_ROWS__.length) {
   window.__loadFromJSONP(window.__GAS_ROWS__);
-} else {
-  // si no llegaron aún, el callback handleGASData disparará __loadFromJSONP cuando lleguen
 }
