@@ -8,7 +8,18 @@
   <meta http-equiv="Expires" content="0" />
   <title>Briefing — Arribos & Salidas</title>
 
-  <link rel="stylesheet" href="css/styles.css?v=2025-10-02-01">
+  <!-- Versionado para evitar caché viejo -->
+  <link rel="stylesheet" href="css/styles.css?v=2025-10-02-07">
+
+  <!-- GAS_URL antes de app.js -->
+  <script>
+    window.GAS_URL = "https://script.google.com/macros/s/AKfycbz5fwRnkEWCG7WeSLeLExk9Ip4XyUo-SeyUkQk0M5ssLT5qvXZwoka2yAzzKJp54xQt4w/exec";
+    window.DEV = new URLSearchParams(location.search).has('dev');
+  </script>
+
+  <!-- Tu lógica principal -->
+  <script src="js/app.js?v=2025-10-02-07" defer></script>
+
   <style>
     .controls{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
     .date-input{padding:8px;border:1px solid var(--border);border-radius:10px}
@@ -17,6 +28,22 @@
     .legend .sw{display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid var(--border);margin-right:6px;vertical-align:middle}
     .legend .micro{background:rgba(139,92,246,.16);border-color:rgba(139,92,246,.35)}
     .micro-cell{background:rgba(139,92,246,.16);border:1px solid rgba(139,92,246,.35);border-radius:6px;padding:4px 8px;font-weight:700}
+
+    /* Estilos columna PUSH */
+    .delaymins-cell { display:flex; gap:6px; align-items:center; }
+    .delaymins-input {
+      width:70px; padding:4px 8px; border:1px solid var(--border);
+      border-radius:8px; text-align:right; transition:background .2s, color .2s, border-color .2s;
+    }
+    .delaymins-save {
+      padding:4px 10px; border:1px solid var(--border);
+      border-radius:8px; background:#fff; cursor:pointer; font-weight:600;
+    }
+    .delaymins-save[disabled] { opacity:.6; cursor:not-allowed; }
+
+    /* Coloreado según valor */
+    .delaymins-ok   { background:rgba(34,197,94,.14);  border-color:rgba(34,197,94,.35);  color:#166534; }
+    .delaymins-warn { background:rgba(255,193,7,.18);  border-color:rgba(255,193,7,.45);  color:#78350f; }
   </style>
 </head>
 <body>
@@ -69,61 +96,31 @@
   </div>
 </div>
 
-<script src="js/app.js?v=2025-10-02-01" defer></script>
-
+<!-- JSONP utilidades / A1 update -->
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbxhNByp7sqrxfyMDddqV6O9OsGmqIzEcfrn49TcYN9qUettWe4iETKaNems1WWrtMi8/exec";
-  const DEV = new URLSearchParams(location.search).has('dev');
-
-  (function devTools(){
-    if (!DEV) return;
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
-    }
-    document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('script[src],link[rel="stylesheet"][href]').forEach(el=>{
-        const attr = el.tagName==='SCRIPT'?'src':'href';
-        try {
-          const u = new URL(el.getAttribute(attr), location.href);
-          u.searchParams.set('_', Date.now());
-          el.setAttribute(attr, u.toString());
-        } catch(e){}
-      });
-      console.info('[DEV] sin SW y sin caché');
-    });
-  })();
-
   function jsonpLoad({url, callbackName, id, timeoutMs = 12000, onError}) {
-    const prev = document.getElementById(id);
-    if (prev) prev.remove();
+    try {
+      if (id) { const prev = document.getElementById(id); if (prev) prev.remove(); }
+      const u = new URL(url, location.href);
+      u.searchParams.set('_ts', Date.now());
+      if (callbackName) u.searchParams.set('callback', callbackName);
 
-    const u = new URL(url, location.href);
-    u.searchParams.set('_ts', Date.now());
-    u.searchParams.set('callback', callbackName);
+      const s = document.createElement('script');
+      if (id) s.id = id;
+      s.async = true;
+      s.src = u.toString();
 
-    if (location.protocol === 'https:' && u.protocol === 'http:') {
-      console.error('[JSONP] Mixed Content bloqueado en Chrome:', u.href);
-      onError?.(new Error('MixedContent'));
-      return;
+      let done = false;
+      const to = setTimeout(() => { if (!done){ done = true; s.remove(); onError?.(new Error('Timeout')); }}, timeoutMs);
+      s.onerror = () => { if (!done){ done = true; clearTimeout(to); s.remove(); onError?.(new Error('NetworkError')); } };
+
+      document.body.appendChild(s);
+    } catch(e) {
+      onError?.(e);
     }
-
-    const s = document.createElement('script');
-    s.id = id; s.async = true; s.src = u.toString();
-
-    let done = false;
-    const to = setTimeout(() => {
-      if (done) return; done = true; s.remove();
-      onError?.(new Error('Timeout'));
-    }, timeoutMs);
-
-    s.onerror = () => {
-      if (done) return; done = true; clearTimeout(to); s.remove();
-      onError?.(new Error('NetworkError'));
-    };
-
-    document.body.appendChild(s);
   }
 
+  // callbacks de datos
   window.handleGASData = function(rows){
     window.__GAS_ROWS__ = rows || [];
     if (typeof window.__loadFromJSONP === 'function') {
@@ -143,15 +140,17 @@
 
   function requestGAS(){
     jsonpLoad({
-      url: GAS_URL,
+      url: window.GAS_URL,
       callbackName: 'handleGASData',
       id: 'jsonp-gas-data',
       onError(err){ console.error('[GAS] Error cargando datos:', err && err.message); }
     });
   }
+  // ✅ hacerla global para que app.js pueda refrescar
+  window.requestGAS = requestGAS;
 
   function updateA1(dateStr){
-    const url = GAS_URL + "?action=update&date=" + encodeURIComponent(dateStr);
+    const url = window.GAS_URL + "?action=update&date=" + encodeURIComponent(dateStr);
     jsonpLoad({
       url, callbackName: 'handleGASUpdate', id: 'jsonp-gas-update',
       onError(err){ console.error('[GAS] Error aplicando fecha:', err && err.message); alert('No se pudo contactar al servicio. Reintentá.'); }
@@ -159,11 +158,11 @@
   }
 
   window.addEventListener('DOMContentLoaded', function(){
-    const inputFecha   = document.getElementById('inputFecha');
-    const btnAplicar   = document.getElementById('btnAplicarFecha');
-    const btnRefresh   = document.getElementById('btnRefresh');
+    const inputFecha = document.getElementById('inputFecha');
+    const btnAplicar = document.getElementById('btnAplicarFecha');
+    const btnRefresh = document.getElementById('btnRefresh');
     const legendMicros = document.getElementById('legendMicros');
-    const tabs         = document.querySelectorAll('.tab');
+    const tabs = document.querySelectorAll('.tab');
 
     btnAplicar.addEventListener('click', function(){
       const val = inputFecha.value;
@@ -171,7 +170,7 @@
       updateA1(val);
     });
 
-    btnRefresh && btnRefresh.addEventListener('click', requestGAS);
+    btnRefresh?.addEventListener('click', requestGAS);
 
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {

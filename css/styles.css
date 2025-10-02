@@ -25,6 +25,7 @@ header{display:flex;flex-direction:column;gap:12px;margin-bottom:12px;text-align
 .container{display:grid;gap:12px}
 .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:10px;text-align:center}
 
+/* Antes: overflow:auto (generaba scroll interno). Lo liberamos en desktop. */
 .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px}
 
 /* Tablas */
@@ -148,4 +149,71 @@ td.estado-vuelo .badge{ min-width:120px; }
   color:#78350f;
   background:rgba(234,179,8,.18);
   border-color:rgba(234,179,8,.35);
+}
+
+/* Desvío (min) en Salidas */
+.delaymins-cell { display:flex; gap:6px; align-items:center; }
+.delaymins-input {
+  width: 70px; padding:4px 8px; border:1px solid var(--border);
+  border-radius:8px; text-align:right;
+}
+.delaymins-save {
+  padding:4px 10px; border:1px solid var(--border);
+  border-radius:8px; background:#fff; cursor:pointer;
+  font-weight:600;
+}
+.delaymins-save[disabled] { opacity:.6; cursor:not-allowed; }
+
+/* =========================
+   AJUSTES PARA CENTRAR SIN SCROLL EN DESKTOP
+   ========================= */
+
+/* No usamos flex en body: dejamos que el contenido crezca normal */
+html, body { height: 100%; }
+body{ display:block; }
+
+/* Más ancho útil y centrado del contenedor principal */
+.wrap{
+  max-width: 1400px;           /* ↑ más ancho para que la tabla entre */
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Las tarjetas ocupan todo el ancho del wrap */
+.card{ width: 100%; max-width: none; }
+
+/* En desktop, quitamos el scroll horizontal forzado del contenedor */
+.table-wrap{ overflow-x: visible; }
+
+/* La tabla se adapta mejor con layout automático */
+table{
+  table-layout: auto;          /* antes fixed */
+  width: 100%;
+}
+
+/* En pantallas grandes, repartimos anchos relativos para que todo quepa */
+@media (min-width: 1200px){
+  #tblSalidas colgroup col:nth-child(1){ width: 7%; }
+  #tblSalidas colgroup col:nth-child(2){ width:15%; }
+  #tblSalidas colgroup col:nth-child(3){ width: 7%; }
+  #tblSalidas colgroup col:nth-child(4){ width: 7%; }
+  #tblSalidas colgroup col:nth-child(5){ width:10%; }
+  #tblSalidas colgroup col:nth-child(6){ width:12%; }
+  #tblSalidas colgroup col:nth-child(7){ width: 8%; }
+  #tblSalidas colgroup col:nth-child(8){ width: 8%; }
+  #tblSalidas colgroup col:nth-child(9){ width:18%; }
+  #tblSalidas colgroup col:nth-child(10){width: 8%; }
+
+  #tblArribos colgroup col:nth-child(1){ width:10%; }
+  #tblArribos colgroup col:nth-child(2){ width:28%; }
+  #tblArribos colgroup col:nth-child(3){ width:12%; }
+  #tblArribos colgroup col:nth-child(4){ width:25%; }
+  #tblArribos colgroup col:nth-child(5){ width:25%; }
+}
+
+/* En mobile mantenemos scroll horizontal si no entra, para no apretar todo */
+@media (max-width: 768px){
+  .wrap{ max-width: 100%; }
+  .card{ max-width: none; }
+  .table-wrap{ overflow-x: auto; }
 }
