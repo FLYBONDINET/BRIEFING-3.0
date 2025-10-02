@@ -8,27 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Briefing — Arribos & Salidas</title>
 
-  <!-- Versionador de recursos (cambiá VER cuando subas cambios) -->
-  <script>
-  (function(){
-    const VER = 'v2025-10-02-01';
-    // agrega ?v=VER a CSS/JS ya presentes en el DOM
-    document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('link[rel="stylesheet"][href],script[src]').forEach(el=>{
-        const attr = el.tagName==='LINK' ? 'href' : 'src';
-        try {
-          const u = new URL(el.getAttribute(attr), location.href);
-          if (!u.searchParams.has('v')) {
-            u.searchParams.set('v', VER);
-            el.setAttribute(attr, u.toString());
-          }
-        } catch(e){}
-      });
-    });
-  })();
-  </script>
-
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=2025-10-02-01">
   <style>
     .controls{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
     .date-input{padding:8px;border:1px solid var(--border);border-radius:10px}
@@ -89,16 +69,12 @@
   </div>
 </div>
 
-<!-- Tu lógica principal de UI -->
-<script src="js/app.js" defer></script>
+<script src="js/app.js?v=2025-10-02-01" defer></script>
 
-<!-- Bloque robusto para Chrome móvil (JSONP con cleanup/timeout, dev mode, mixed content) -->
 <script>
-  // ========= Config =========
   const GAS_URL = "https://script.google.com/macros/s/AKfycbxhNByp7sqrxfyMDddqV6O9OsGmqIzEcfrn49TcYN9qUettWe4iETKaNems1WWrtMi8/exec";
   const DEV = new URLSearchParams(location.search).has('dev');
 
-  // ========= Modo dev: desregistrar SW + bustear recursos =========
   (function devTools(){
     if (!DEV) return;
     if ('serviceWorker' in navigator) {
@@ -117,55 +93,37 @@
     });
   })();
 
-  // ========= Loader JSONP robusto =========
-  function jsonpLoad(opts) {
-    var url = opts.url;
-    var callbackName = opts.callbackName;
-    var id = opts.id;
-    var timeoutMs = opts.timeoutMs || 12000;
-    var onError = opts.onError;
-
-    // limpiar script previo
-    var prev = document.getElementById(id);
+  function jsonpLoad({url, callbackName, id, timeoutMs = 12000, onError}) {
+    const prev = document.getElementById(id);
     if (prev) prev.remove();
 
-    // armar URL con cache-bust y callback
-    var u = new URL(url, location.href);
+    const u = new URL(url, location.href);
     u.searchParams.set('_ts', Date.now());
     u.searchParams.set('callback', callbackName);
 
-    // mixed content
     if (location.protocol === 'https:' && u.protocol === 'http:') {
       console.error('[JSONP] Mixed Content bloqueado en Chrome:', u.href);
-      if (onError) onError(new Error('MixedContent'));
+      onError?.(new Error('MixedContent'));
       return;
     }
 
-    var s = document.createElement('script');
-    s.id = id;
-    s.async = true;
-    s.src = u.toString();
+    const s = document.createElement('script');
+    s.id = id; s.async = true; s.src = u.toString();
 
-    var done = false;
-    var to = setTimeout(function(){
-      if (done) return;
-      done = true;
-      s.remove();
-      if (onError) onError(new Error('Timeout'));
+    let done = false;
+    const to = setTimeout(() => {
+      if (done) return; done = true; s.remove();
+      onError?.(new Error('Timeout'));
     }, timeoutMs);
 
-    s.onerror = function(){
-      if (done) return;
-      done = true;
-      clearTimeout(to);
-      s.remove();
-      if (onError) onError(new Error('NetworkError'));
+    s.onerror = () => {
+      if (done) return; done = true; clearTimeout(to); s.remove();
+      onError?.(new Error('NetworkError'));
     };
 
     document.body.appendChild(s);
   }
 
-  // ========= Callbacks globales para GAS =========
   window.handleGASData = function(rows){
     window.__GAS_ROWS__ = rows || [];
     if (typeof window.__loadFromJSONP === 'function') {
@@ -183,63 +141,51 @@
     }
   };
 
-  // ========= Wrappers =========
   function requestGAS(){
     jsonpLoad({
       url: GAS_URL,
       callbackName: 'handleGASData',
       id: 'jsonp-gas-data',
-      onError: function(err){
-        console.error('[GAS] Error cargando datos:', err && err.message);
-      }
+      onError(err){ console.error('[GAS] Error cargando datos:', err && err.message); }
     });
   }
 
   function updateA1(dateStr){
-    var url = GAS_URL + "?action=update&date=" + encodeURIComponent(dateStr);
+    const url = GAS_URL + "?action=update&date=" + encodeURIComponent(dateStr);
     jsonpLoad({
-      url: url,
-      callbackName: 'handleGASUpdate',
-      id: 'jsonp-gas-update',
-      onError: function(err){
-        console.error('[GAS] Error aplicando fecha:', err && err.message);
-        alert('No se pudo contactar al servicio. Reintentá.');
-      }
+      url, callbackName: 'handleGASUpdate', id: 'jsonp-gas-update',
+      onError(err){ console.error('[GAS] Error aplicando fecha:', err && err.message); alert('No se pudo contactar al servicio. Reintentá.'); }
     });
   }
 
-  // ========= Bootstrap =========
   window.addEventListener('DOMContentLoaded', function(){
-    var inputFecha   = document.getElementById('inputFecha');
-    var btnAplicar   = document.getElementById('btnAplicarFecha');
-    var btnRefresh   = document.getElementById('btnRefresh');
-    var legendMicros = document.getElementById('legendMicros');
-    var tabs         = document.querySelectorAll('.tab');
+    const inputFecha   = document.getElementById('inputFecha');
+    const btnAplicar   = document.getElementById('btnAplicarFecha');
+    const btnRefresh   = document.getElementById('btnRefresh');
+    const legendMicros = document.getElementById('legendMicros');
+    const tabs         = document.querySelectorAll('.tab');
 
     btnAplicar.addEventListener('click', function(){
-      var val = inputFecha.value;
+      const val = inputFecha.value;
       if (!val) { alert("Seleccioná una fecha."); return; }
       updateA1(val);
     });
 
-    if (btnRefresh) btnRefresh.addEventListener('click', requestGAS);
+    btnRefresh && btnRefresh.addEventListener('click', requestGAS);
 
-    // Tabs + leyenda solo en Arribos
-    tabs.forEach(function(tab){
-      tab.addEventListener('click', function(){
-        tabs.forEach(function(t){ t.classList.remove('active'); });
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-
-        document.querySelectorAll('.card').forEach(function(c){ c.style.display = 'none'; });
-        var selected = tab.dataset.tab;
+        document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
+        const selected = tab.dataset.tab;
         document.getElementById('card' + selected.charAt(0).toUpperCase() + selected.slice(1)).style.display = '';
-
         legendMicros.style.display = (selected === 'arribos') ? 'flex' : 'none';
       });
     });
 
-    requestGAS();                    // primera carga
-    setInterval(requestGAS, 120000); // refresco cada 2 minutos
+    requestGAS();
+    setInterval(requestGAS, 120000);
   });
 </script>
 </body>
