@@ -5,147 +5,154 @@
   --delay:#f39c12;
   --cyan:#06b6d4;
   --border:#e5e7eb;
-  --micro:#8b5cf6;
 }
 
-body{margin:0;font-family:sans-serif;background:#fafafa;color:#111}
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#fafafa;
+  color:#111;
+}
+
 .wrap{max-width:980px;margin:0 auto;padding:16px}
 
-/* Header */
-header{display:flex;flex-direction:column;gap:12px;margin-bottom:12px;text-align:center}
-.brand{display:flex;gap:12px;align-items:center;justify-content:center}
-.logo{width:44px;height:44px;object-fit:contain;border-radius:8px;border:1px solid var(--border);background:#fff;padding:4px}
-.refresh-btn{background:var(--fb-yellow);border:0;padding:8px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+header{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-bottom:12px;
+  text-align:center; /* centra encabezado */
+}
 
-/* Tabs */
-.tabs{display:flex;justify-content:center;border-bottom:2px solid var(--border);margin:8px 0}
-.tab{padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;font-weight:600;text-align:center}
+.brand{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:center; /* centra logo + título */
+}
+
+.logo{
+  width:44px;
+  height:44px;
+  object-fit:contain;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:#fff;
+  padding:4px;
+}
+
+.refresh-btn{
+  background:var(--fb-yellow);
+  border:0;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.tabs{
+  display:flex;
+  justify-content:center; /* centra pestañas */
+  border-bottom:2px solid var(--border);
+  margin:8px 0;
+}
+.tab{
+  padding:10px 14px;
+  cursor:pointer;
+  border-bottom:3px solid transparent;
+  font-weight:600;
+  text-align:center;
+}
 .tab.active{border-color:var(--fb-yellow)}
 
 .container{display:grid;gap:12px}
-.card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:10px;text-align:center}
-
-.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px}
-
-/* Tablas */
-table{width:100%;border-collapse:collapse;font-size:.95rem;table-layout:fixed}
-thead th, tbody td{padding:8px;border-bottom:1px solid var(--border);vertical-align:middle}
-thead th{white-space:nowrap;text-align:center}
-tbody td:first-child strong{display:inline-block;text-align:center}
-
-/* Evitar solapado + cortar con … (excepto celdas Vuelo con 2-3 líneas) */
-#tblSalidas th, #tblSalidas td,
-#tblArribos th, #tblArribos td{
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+.card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:10px;
+  text-align:center; /* centra título dentro de la card */
 }
 
-/* ===== Anchos — Salidas (sin Destino/ETD) ===== */
-#tblSalidas colgroup col:nth-child(1){ width: 90px; }    /* Matrícula   */
-#tblSalidas colgroup col:nth-child(2){ width:140px; }    /* Vuelo (custom) */
-#tblSalidas colgroup col:nth-child(3){ width: 80px; }    /* Apertura    */
-#tblSalidas colgroup col:nth-child(4){ width: 80px; }    /* Cierre      */
-#tblSalidas colgroup col:nth-child(5){ width:120px; }    /* POS/PUERTA  */
-#tblSalidas colgroup col:nth-child(6){ width:150px; }    /* Estado      */
-#tblSalidas colgroup col:nth-child(7){ width:130px; }    /* COMBU       */
-#tblSalidas colgroup col:nth-child(8){ width:130px; }    /* BINGO       */
-#tblSalidas colgroup col:nth-child(9){ width:240px; }    /* Informe DLY */
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--border);
+  border-radius:10px;
+}
 
-/* ===== Anchos — Arribos (sin Origen/ETA explícitas) ===== */
-#tblArribos colgroup col:nth-child(1){ width: 60px; }    /* Matrícula   */
-#tblArribos colgroup col:nth-child(2){ width: 60px; }    /* Vuelo (3 líneas) */
-#tblArribos colgroup col:nth-child(3){ width: 50px; }    /* POS/CINTA   */
-#tblArribos colgroup col:nth-child(4){ width: 90px; }    /* Estado      */
-#tblArribos colgroup col:nth-child(5){ width: 90px; }    /* ETA TAMS    */
+/* === TABLAS CENTRADAS === */
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:.95rem;
+  text-align:center;
+}
+thead th, tbody td{
+  text-align:center;
+  vertical-align:middle;
+  padding:8px;
+  border-bottom:1px solid var(--border);
+}
+tbody td:first-child strong{
+  display:inline-block;
+  text-align:center;
+}
 
-/* Centrar SOLO columnas con pills */
-th.estado-vuelo, td.estado-vuelo,
-th.combu,        td.combu,
-th.bingo,        td.bingo,
-th.delay,        td.delay{ text-align:center }
-
-/* ===== Pills / Badges ===== */
+/* === BADGES base === */
 .badge{
-  display:inline-flex;
-  justify-content:center;
-  align-items:center;
-  gap:6px;
+  display:inline-block;
+  min-width:100px;
   padding:4px 10px;
-  min-width:76px;
   border-radius:999px;
   font-size:.85rem;
   border:1px solid var(--border);
   background:transparent;
   text-align:center;
-  white-space:nowrap;
-  vertical-align:middle;
 }
 
-/* Estado de vuelo (más ancho por texto largo) */
-td.estado-vuelo .badge{ min-width:120px; }
-
-/* Estados */
-.badge.en-vuelo{   background:rgba(6,182,212,.18);  border-color:rgba(6,182,212,.45) }
-.badge.en-tierra{  background:rgba(169,122,80,.12); border-color:rgba(169,122,80,.35); color:#6b4a2c }
-.badge.aterrizado{ background:rgba(46,204,113,.18); border-color:rgba(46,204,113,.45) }
+/* Estados (Arribos + Salidas) */
+.badge.aterrizado{
+  background:rgba(46,204,113,.18);      /* verde */
+  border-color:rgba(46,204,113,.45);
+}
+.badge.en-vuelo{
+  background:rgba(6,182,212,.18);       /* cian */
+  border-color:rgba(6,182,212,.45);
+}
+/* A CONFIRMAR => sin clase, queda transparente */
 
 /* COMBU / BINGO */
-.badge.ok{    background:rgba(46,204,113,.18); border-color:rgba(46,204,113,.45); min-width:84px; font-weight:600 }
-.badge.no-ok{ background:rgba(231,76,60,.18);  border-color:rgba(231,76,60,.45);  min-width:84px; font-weight:600 }
-
-/* DELAY */
-.badge.delay-warn{ background:rgba(255,193,7,.20); border-color:rgba(255,193,7,.45) }
-.badge.delay-ok{   background:rgba(46,204,113,.18); border-color:rgba(46,204,113,.45) }
-
-/* Vuelo “pintado” (Micros) */
-.micro-cell{
-  background:rgba(139,92,246,.16);
-  border:1px solid rgba(139,92,246,.35);
-  border-radius:6px;
-  padding:4px 8px;
-  font-weight:700;
+.badge.ok{
+  background:rgba(46,204,113,.18);      /* verde */
+  border-color:rgba(46,204,113,.45);
+}
+.badge.no-ok{
+  background:rgba(231,76,60,.18);       /* rojo */
+  border-color:rgba(231,76,60,.45);
 }
 
-/* Leyenda y suelo */
-.legend{display:flex;gap:12px;align-items:center;justify-content:center;font-size:.9rem;margin-top:6px}
-.legend .sw{display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid var(--border);margin-right:6px;vertical-align:middle}
-.legend .micro{background:rgba(139,92,246,.16);border-color:rgba(139,92,246,.35)}
-.ground{display:inline-block;font-size:.7rem;line-height:.7rem;margin-left:-2px}
+/* Informe de DELAY (Salidas) */
+.badge.delay-warn{
+  background:rgba(255,193,7,.20);       /* naranja-amarillento */
+  border-color:rgba(255,193,7,.45);
+}
+.badge.delay-ok{
+  background:rgba(46,204,113,.18);      /* verde */
+  border-color:rgba(46,204,113,.45);
+}
 
-/* === Celdas “Vuelo” (2-3 líneas) === */
-#tblSalidas .flight-cell,
-#tblArribos .flight-cell{
-  white-space:normal;   /* permite múltiples líneas */
-  overflow:visible;
-  text-overflow:clip;
-  line-height:1.15;
+/* Misceláneo */
+.row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:6px;
 }
-.vuelo-top{ font-weight:600; }
-.vuelo-eta{ font-size:.95rem; color:#222; }
-
-/* === Puntualidad en línea propia (debajo de la hora) === */
-.vuelo-punct{
-  display:inline-block;
-  margin-top:3px;
-  padding:2px 8px;
-  border-radius:999px;
-  border:1px solid transparent;
-  font-weight:700;
-  font-size:.8rem;
-}
-.vuelo-punct.ontime{
-  color:#166534;
-  background:rgba(34,197,94,.15);
-  border-color:rgba(34,197,94,.35);
-}
-.vuelo-punct.delayed{
-  color:#7f1d1d;
-  background:rgba(239,68,68,.15);
-  border-color:rgba(239,68,68,.35);
-}
-.vuelo-punct.early{
-  color:#78350f;
-  background:rgba(234,179,8,.18);
-  border-color:rgba(234,179,8,.35);
+#searchInput{
+  width:260px;
+  max-width:100%;
+  padding:8px;
+  border:1px solid var(--border);
+  border-radius:10px;
 }
