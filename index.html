@@ -71,45 +71,131 @@
   </div>
 </div>
 
+<!-- Tu lógica principal de UI -->
 <script src="js/app.js" defer></script>
 
+<!-- Bloque robusto para Chrome móvil (JSONP con cleanup/timeout, dev mode, mixed content) -->
 <script>
+  // ========= Config =========
   const GAS_URL = "https://script.google.com/macros/s/AKfycbxhNByp7sqrxfyMDddqV6O9OsGmqIzEcfrn49TcYN9qUettWe4iETKaNems1WWrtMi8/exec";
+  const DEV = new URLSearchParams(location.search).has('dev');
 
+  // ========= Util: desregistrar SW y bustear caché en dev =========
+  (function devTools(){
+    if (!DEV) return;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+    }
+    // cache-bust de scripts/estilos ya cargados
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('script[src],link[rel="stylesheet"][href]').forEach(el=>{
+        const attr = el.tagName==='SCRIPT'?'src':'href';
+        try {
+          const u = new URL(el.getAttribute(attr), location.href);
+          u.searchParams.set('_', Date.now());
+          el.setAttribute(attr, u.toString());
+        } catch(e){}
+      });
+      console.info('[DEV] Modo sin SW y sin caché');
+    });
+  })();
+
+  // ========= Util: loader JSONP robusto (con cleanup, timeout y onerror) =========
+  function jsonpLoad({url, callbackName, id, timeoutMs = 12000, onError}) {
+    // 1) limpiar script previo si existe
+    const prev = document.getElementById(id);
+    if (prev) prev.remove();
+
+    // 2) armar URL con cache-bust
+    const u = new URL(url, location.href);
+    u.searchParams.set('_ts', Date.now());
+    u.searchParams.set('callback', callbackName);
+
+    // 3) alerta si hay mixed content
+    if (location.protocol === 'https:' && u.protocol === 'http:') {
+      console.error('[JSONP] Mixed Content bloqueado en Chrome. Cambiá a HTTPS:', u.href);
+      onError?.(new Error('MixedContent'));
+      return;
+    }
+
+    // 4) crear script
+    const s = document.createElement('script');
+    s.id = id;
+    s.async = true;
+    s.src = u.toString();
+
+    let done = false;
+    const to = setTimeout(() => {
+      if (done) return;
+      done = true;
+      s.remove();
+      onError?.(new Error('Timeout'));
+    }, timeoutMs);
+
+    s.onerror = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(to);
+      s.remove();
+      onError?.(new Error('NetworkError'));
+    };
+
+    // 5) inyectar
+    document.body.appendChild(s);
+  }
+
+  // ========= Callbacks esperadas por GAS (globales) =========
   function handleGASData(rows){
     window.__GAS_ROWS__ = rows || [];
-    if (window.__loadFromJSONP) window.__loadFromJSONP(window.__GAS_ROWS__);
+    // Hook de app.js si existe
+    if (typeof window.__loadFromJSONP === 'function') {
+      try { window.__loadFromJSONP(window.__GAS_ROWS__); }
+      catch (e) { console.error('Error en __loadFromJSONP:', e); }
+    }
   }
 
   function handleGASUpdate(res){
     if (res && res.ok) {
       alert("Fecha aplicada en A1: " + (res.set || ""));
-      requestGAS();
+      requestGAS(); // refrescar
     } else {
       alert("No se pudo aplicar la fecha" + (res && res.error ? " ("+res.error+")" : ""));
     }
   }
 
+  // ========= Wrappers de tu lógica =========
   function requestGAS(){
-    const s = document.createElement('script');
-    s.async = true;
-    s.src = GAS_URL + "?callback=handleGASData&_ts=" + Date.now();
-    document.body.appendChild(s);
+    jsonpLoad({
+      url: GAS_URL,
+      callbackName: 'handleGASData',
+      id: 'jsonp-gas-data',
+      onError(err){
+        console.error('[GAS] Error cargando datos:', err && err.message);
+        // Podés mostrar un toast/minibanner si querés
+      }
+    });
   }
 
   function updateA1(dateStr){
-    const s = document.createElement('script');
-    s.async = true;
-    s.src = GAS_URL + "?action=update&date=" + encodeURIComponent(dateStr) + "&callback=handleGASUpdate&_ts=" + Date.now();
-    document.body.appendChild(s);
+    const url = GAS_URL + "?action=update&date=" + encodeURIComponent(dateStr);
+    jsonpLoad({
+      url,
+      callbackName: 'handleGASUpdate',
+      id: 'jsonp-gas-update',
+      onError(err){
+        console.error('[GAS] Error aplicando fecha:', err && err.message);
+        alert('No se pudo contactar al servicio. Reintentá.');
+      }
+    });
   }
 
+  // ========= Bootstrap (UI + tabs + polling) =========
   window.addEventListener('DOMContentLoaded', function(){
-    const inputFecha = document.getElementById('inputFecha');
-    const btnAplicar = document.getElementById('btnAplicarFecha');
-    const btnRefresh = document.getElementById('btnRefresh');
+    const inputFecha   = document.getElementById('inputFecha');
+    const btnAplicar   = document.getElementById('btnAplicarFecha');
+    const btnRefresh   = document.getElementById('btnRefresh');
     const legendMicros = document.getElementById('legendMicros');
-    const tabs = document.querySelectorAll('.tab');
+    const tabs         = document.querySelectorAll('.tab');
 
     btnAplicar.addEventListener('click', function(){
       const val = inputFecha.value;
@@ -117,9 +203,9 @@
       updateA1(val);
     });
 
-    btnRefresh?.addEventListener('click', requestGAS);
+    btnRefresh && btnRefresh.addEventListener('click', requestGAS);
 
-    // Toggle de pestañas y leyenda
+    // Tabs + leyenda solo en Arribos
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         tabs.forEach(t => t.classList.remove('active'));
@@ -129,13 +215,12 @@
         const selected = tab.dataset.tab;
         document.getElementById('card' + selected.charAt(0).toUpperCase() + selected.slice(1)).style.display = '';
 
-        // Mostrar leyenda solo en Arribos
         legendMicros.style.display = (selected === 'arribos') ? 'flex' : 'none';
       });
     });
 
-    requestGAS();
-    setInterval(requestGAS, 120000);
+    requestGAS();                    // primera carga
+    setInterval(requestGAS, 120000); // refresco cada 2 minutos
   });
 </script>
 </body>
