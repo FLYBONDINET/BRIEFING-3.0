@@ -8,7 +8,44 @@
   <meta http-equiv="Expires" content="0" />
   <title>Briefing — Arribos & Salidas</title>
 
-  <link rel="stylesheet" href="css/styles.css?v=2025-10-02-01">
+  <!-- HARD RESET para Android Chrome: usar ?reset=1 o ?dev=1 una vez -->
+  <script>
+  (function(){
+    const q = new URLSearchParams(location.search);
+    const HARD = q.has('reset') || q.has('dev');
+    const SCOPE_HINT = location.origin + '/briefing3.0/';
+
+    async function hardReset(){
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs
+            .filter(r => (r.scope||'').indexOf(SCOPE_HINT)===0)
+            .map(r => r.unregister()));
+        }
+        if (window.caches && caches.keys) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+        try { localStorage.clear(); } catch(e){}
+        try { sessionStorage.clear(); } catch(e){}
+        q.delete('reset'); q.delete('dev');
+        const u = new URL(location.href);
+        u.search = q.toString();
+        u.searchParams.set('_', Date.now());
+        location.replace(u.toString());
+      } catch(e){
+        console.warn('[hard-reset] fallo parcial:', e);
+      }
+    }
+
+    if (HARD) hardReset();
+  })();
+  </script>
+
+  <!-- CSS con versión para bustear caché -->
+  <link rel="stylesheet" href="css/styles.css?v=2025-10-02-03">
+
   <style>
     .controls{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
     .date-input{padding:8px;border:1px solid var(--border);border-radius:10px}
@@ -17,6 +54,7 @@
     .legend .sw{display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid var(--border);margin-right:6px;vertical-align:middle}
     .legend .micro{background:rgba(139,92,246,.16);border-color:rgba(139,92,246,.35)}
     .micro-cell{background:rgba(139,92,246,.16);border:1px solid rgba(139,92,246,.35);border-radius:6px;padding:4px 8px;font-weight:700}
+    #net-error{position:fixed;left:0;right:0;bottom:0;padding:10px 14px;background:#fee2e2;color:#991b1b;border-top:1px solid #fecaca;font-weight:600;z-index:9999;display:none}
   </style>
 </head>
 <body>
@@ -69,11 +107,23 @@
   </div>
 </div>
 
-<script src="js/app.js?v=2025-10-02-01" defer></script>
+<!-- Banner de error -->
+<div id="net-error"></div>
 
+<!-- Tu lógica principal de UI (versión con bust de caché) -->
+<script src="js/app.js?v=2025-10-02-03" defer></script>
+
+<!-- Loader JSONP robusto + UI bootstrap -->
 <script>
   const GAS_URL = "https://script.google.com/macros/s/AKfycbxhNByp7sqrxfyMDddqV6O9OsGmqIzEcfrn49TcYN9qUettWe4iETKaNems1WWrtMi8/exec";
   const DEV = new URLSearchParams(location.search).has('dev');
+
+  function showErrorBanner(msg){
+    const b = document.getElementById('net-error');
+    if (!b) return;
+    b.textContent = msg;
+    b.style.display = 'block';
+  }
 
   (function devTools(){
     if (!DEV) return;
@@ -108,7 +158,9 @@
     }
 
     const s = document.createElement('script');
-    s.id = id; s.async = true; s.src = u.toString();
+    s.id = id;
+    s.async = true;
+    s.src = u.toString();
 
     let done = false;
     const to = setTimeout(() => {
@@ -124,6 +176,7 @@
     document.body.appendChild(s);
   }
 
+  // Callbacks globales para GAS (usados por app.js)
   window.handleGASData = function(rows){
     window.__GAS_ROWS__ = rows || [];
     if (typeof window.__loadFromJSONP === 'function') {
@@ -146,15 +199,24 @@
       url: GAS_URL,
       callbackName: 'handleGASData',
       id: 'jsonp-gas-data',
-      onError(err){ console.error('[GAS] Error cargando datos:', err && err.message); }
+      onError(err){
+        console.error('[GAS] Error cargando datos:', err && err.message);
+        showErrorBanner('No se pueden cargar datos de Google Apps Script. Probá entrar una vez con ?reset=1 o ?dev=1. Si sigue, probá otra red (datos/Wi-Fi).');
+      }
     });
   }
 
   function updateA1(dateStr){
     const url = GAS_URL + "?action=update&date=" + encodeURIComponent(dateStr);
     jsonpLoad({
-      url, callbackName: 'handleGASUpdate', id: 'jsonp-gas-update',
-      onError(err){ console.error('[GAS] Error aplicando fecha:', err && err.message); alert('No se pudo contactar al servicio. Reintentá.'); }
+      url,
+      callbackName: 'handleGASUpdate',
+      id: 'jsonp-gas-update',
+      onError(err){
+        console.error('[GAS] Error aplicando fecha:', err && err.message);
+        showErrorBanner('No se pudo contactar al servicio para aplicar la fecha. Reintentá o usá ?dev=1.');
+        alert('No se pudo contactar al servicio. Reintentá.');
+      }
     });
   }
 
@@ -184,8 +246,8 @@
       });
     });
 
-    requestGAS();
-    setInterval(requestGAS, 120000);
+    requestGAS();                    // primera carga
+    setInterval(requestGAS, 120000); // refresco cada 2 minutos
   });
 </script>
 </body>

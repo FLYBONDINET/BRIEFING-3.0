@@ -19,12 +19,14 @@ let CURRENT_DATA = [];
 
 /* ===== ARRIBOS ===== */
 function prepareTableArribos(table){
+  if (!table) return;
   table.innerHTML =
     '<colgroup>'
   + '<col><col><col><col><col>'
   + '</colgroup><thead></thead><tbody></tbody>';
 }
 function buildHeadArribos(table){
+  if (!table) return;
   table.querySelector("thead").innerHTML = `
     <tr>
       <th>Matrícula</th>
@@ -75,12 +77,14 @@ function rowHtmlArribo(r){
 
 /* ===== SALIDAS ===== */
 function prepareTableSalidas(table){
+  if (!table) return;
   table.innerHTML =
     '<colgroup>'
   + '<col><col><col><col><col><col><col><col><col>'
   + '</colgroup><thead></thead><tbody></tbody>';
 }
 function buildHeadSalidas(table){
+  if (!table) return;
   table.querySelector("thead").innerHTML = `
     <tr>
       <th>Matrícula</th>
@@ -117,7 +121,7 @@ function badgeDelay(v){
   return `<span class="badge ${cls}">${v||''}</span>`;
 }
 
-// ✅ Aquí agregamos la tercera línea con puntualidad (col Z via "PuntualidadSalida")
+// Tercera línea con puntualidad (col Z via "PuntualidadSalida")
 function vueloCellSalida(r){
   const vu   = r['Vuelo']   || '';
   const dest = r['Destino'] || '';
@@ -155,22 +159,24 @@ function rowHtmlSalida(r){
 
 /* ===== Render & Search ===== */
 function renderAll(data){
+  if (!Array.isArray(data)) data = [];
   const arr = data.filter(d => (d['Tipo']||'').toLowerCase() === 'arribo');
   const sal = data.filter(d => (d['Tipo']||'').toLowerCase() === 'salida');
 
   prepareTableArribos(tblArribos);
   buildHeadArribos(tblArribos);
-  tblArribos.querySelector("tbody").innerHTML = arr.map(rowHtmlArribo).join("");
+  if (tblArribos) tblArribos.querySelector("tbody").innerHTML = arr.map(rowHtmlArribo).join("");
 
   prepareTableSalidas(tblSalidas);
   buildHeadSalidas(tblSalidas);
-  tblSalidas.querySelector("tbody").innerHTML = sal.map(rowHtmlSalida).join("");
+  if (tblSalidas) tblSalidas.querySelector("tbody").innerHTML = sal.map(rowHtmlSalida).join("");
 
-  // Historial con layout actual
-  tblHistorial.querySelector("thead").innerHTML = tblSalidas.querySelector("thead").innerHTML;
-  tblHistorial.querySelector("tbody").innerHTML = data.map(r =>
-    (r['Tipo']||'').toLowerCase() === 'salida' ? rowHtmlSalida(r) : rowHtmlArribo(r)
-  ).join("");
+  if (tblHistorial) {
+    tblHistorial.querySelector("thead").innerHTML = (tblSalidas && tblSalidas.querySelector("thead")) ? tblSalidas.querySelector("thead").innerHTML : '';
+    tblHistorial.querySelector("tbody").innerHTML = data.map(r =>
+      (r['Tipo']||'').toLowerCase() === 'salida' ? rowHtmlSalida(r) : rowHtmlArribo(r)
+    ).join("");
+  }
 }
 
 // JSONP hook
@@ -191,9 +197,11 @@ if (searchInput){
       String(r['Origen']||'').toLowerCase().includes(q) ||
       String(r['Destino']||'').toLowerCase().includes(q)
     );
-    tblHistorial.querySelector("tbody").innerHTML = filtered.map(r =>
-      (r['Tipo']||'').toLowerCase() === 'salida' ? rowHtmlSalida(r) : rowHtmlArribo(r)
-    ).join("");
+    if (tblHistorial) {
+      tblHistorial.querySelector("tbody").innerHTML = filtered.map(r =>
+        (r['Tipo']||'').toLowerCase() === 'salida' ? rowHtmlSalida(r) : rowHtmlArribo(r)
+      ).join("");
+    }
   });
 }
 
@@ -201,11 +209,12 @@ tabs.forEach(t => t.addEventListener("click", () => {
   tabs.forEach(x=>x.classList.remove("active"));
   t.classList.add("active");
   const tab = t.dataset.tab;
-  cardArribos.style.display   = tab==="arribos"   ? "" : "none";
-  cardSalidas.style.display   = tab==="salidas"   ? "" : "none";
-  cardHistorial.style.display = tab==="historial" ? "" : "none";
+  if (cardArribos)   cardArribos.style.display   = tab==="arribos"   ? "" : "none";
+  if (cardSalidas)   cardSalidas.style.display   = tab==="salidas"   ? "" : "none";
+  if (cardHistorial) cardHistorial.style.display = tab==="historial" ? "" : "none";
 }));
 
+// Render inmediato si el JSONP llegó antes que app.js
 if (Array.isArray(window.__GAS_ROWS__) && window.__GAS_ROWS__.length) {
   window.__loadFromJSONP(window.__GAS_ROWS__);
 }
