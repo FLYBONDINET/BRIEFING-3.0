@@ -7,13 +7,32 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Briefing — Arribos & Salidas</title>
+
+  <!-- Versionador de recursos (cambiá VER cuando subas cambios) -->
+  <script>
+  (function(){
+    const VER = 'v2025-10-02-01';
+    // agrega ?v=VER a CSS/JS ya presentes en el DOM
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('link[rel="stylesheet"][href],script[src]').forEach(el=>{
+        const attr = el.tagName==='LINK' ? 'href' : 'src';
+        try {
+          const u = new URL(el.getAttribute(attr), location.href);
+          if (!u.searchParams.has('v')) {
+            u.searchParams.set('v', VER);
+            el.setAttribute(attr, u.toString());
+          }
+        } catch(e){}
+      });
+    });
+  })();
+  </script>
+
   <link rel="stylesheet" href="css/styles.css">
   <style>
     .controls{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
     .date-input{padding:8px;border:1px solid var(--border);border-radius:10px}
     .apply-btn{background:#111;color:#fff;border:0;padding:8px 14px;border-radius:10px;font-weight:600;cursor:pointer}
-
-    /* Leyenda y pintado del vuelo (MICROS) */
     .legend{display:none;gap:12px;align-items:center;justify-content:center;font-size:.9rem;margin-top:6px}
     .legend .sw{display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid var(--border);margin-right:6px;vertical-align:middle}
     .legend .micro{background:rgba(139,92,246,.16);border-color:rgba(139,92,246,.35)}
@@ -32,7 +51,6 @@
       <button class="apply-btn" id="btnAplicarFecha">Aplicar fecha</button>
       <button class="refresh-btn" id="btnRefresh">Actualizar</button>
     </div>
-    <!-- Leyenda: visible solo en Arribos -->
     <div class="legend" id="legendMicros">
       <span><span class="sw micro"></span>vuelo pintado requiere traslado de pasajeros ato-ato</span>
     </div>
@@ -80,13 +98,12 @@
   const GAS_URL = "https://script.google.com/macros/s/AKfycbxhNByp7sqrxfyMDddqV6O9OsGmqIzEcfrn49TcYN9qUettWe4iETKaNems1WWrtMi8/exec";
   const DEV = new URLSearchParams(location.search).has('dev');
 
-  // ========= Util: desregistrar SW y bustear caché en dev =========
+  // ========= Modo dev: desregistrar SW + bustear recursos =========
   (function devTools(){
     if (!DEV) return;
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
     }
-    // cache-bust de scripts/estilos ya cargados
     document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('script[src],link[rel="stylesheet"][href]').forEach(el=>{
         const attr = el.tagName==='SCRIPT'?'src':'href';
@@ -96,123 +113,125 @@
           el.setAttribute(attr, u.toString());
         } catch(e){}
       });
-      console.info('[DEV] Modo sin SW y sin caché');
+      console.info('[DEV] sin SW y sin caché');
     });
   })();
 
-  // ========= Util: loader JSONP robusto (con cleanup, timeout y onerror) =========
-  function jsonpLoad({url, callbackName, id, timeoutMs = 12000, onError}) {
-    // 1) limpiar script previo si existe
-    const prev = document.getElementById(id);
+  // ========= Loader JSONP robusto =========
+  function jsonpLoad(opts) {
+    var url = opts.url;
+    var callbackName = opts.callbackName;
+    var id = opts.id;
+    var timeoutMs = opts.timeoutMs || 12000;
+    var onError = opts.onError;
+
+    // limpiar script previo
+    var prev = document.getElementById(id);
     if (prev) prev.remove();
 
-    // 2) armar URL con cache-bust
-    const u = new URL(url, location.href);
+    // armar URL con cache-bust y callback
+    var u = new URL(url, location.href);
     u.searchParams.set('_ts', Date.now());
     u.searchParams.set('callback', callbackName);
 
-    // 3) alerta si hay mixed content
+    // mixed content
     if (location.protocol === 'https:' && u.protocol === 'http:') {
-      console.error('[JSONP] Mixed Content bloqueado en Chrome. Cambiá a HTTPS:', u.href);
-      onError?.(new Error('MixedContent'));
+      console.error('[JSONP] Mixed Content bloqueado en Chrome:', u.href);
+      if (onError) onError(new Error('MixedContent'));
       return;
     }
 
-    // 4) crear script
-    const s = document.createElement('script');
+    var s = document.createElement('script');
     s.id = id;
     s.async = true;
     s.src = u.toString();
 
-    let done = false;
-    const to = setTimeout(() => {
+    var done = false;
+    var to = setTimeout(function(){
       if (done) return;
       done = true;
       s.remove();
-      onError?.(new Error('Timeout'));
+      if (onError) onError(new Error('Timeout'));
     }, timeoutMs);
 
-    s.onerror = () => {
+    s.onerror = function(){
       if (done) return;
       done = true;
       clearTimeout(to);
       s.remove();
-      onError?.(new Error('NetworkError'));
+      if (onError) onError(new Error('NetworkError'));
     };
 
-    // 5) inyectar
     document.body.appendChild(s);
   }
 
-  // ========= Callbacks esperadas por GAS (globales) =========
-  function handleGASData(rows){
+  // ========= Callbacks globales para GAS =========
+  window.handleGASData = function(rows){
     window.__GAS_ROWS__ = rows || [];
-    // Hook de app.js si existe
     if (typeof window.__loadFromJSONP === 'function') {
       try { window.__loadFromJSONP(window.__GAS_ROWS__); }
       catch (e) { console.error('Error en __loadFromJSONP:', e); }
     }
-  }
+  };
 
-  function handleGASUpdate(res){
+  window.handleGASUpdate = function(res){
     if (res && res.ok) {
       alert("Fecha aplicada en A1: " + (res.set || ""));
-      requestGAS(); // refrescar
+      requestGAS();
     } else {
       alert("No se pudo aplicar la fecha" + (res && res.error ? " ("+res.error+")" : ""));
     }
-  }
+  };
 
-  // ========= Wrappers de tu lógica =========
+  // ========= Wrappers =========
   function requestGAS(){
     jsonpLoad({
       url: GAS_URL,
       callbackName: 'handleGASData',
       id: 'jsonp-gas-data',
-      onError(err){
+      onError: function(err){
         console.error('[GAS] Error cargando datos:', err && err.message);
-        // Podés mostrar un toast/minibanner si querés
       }
     });
   }
 
   function updateA1(dateStr){
-    const url = GAS_URL + "?action=update&date=" + encodeURIComponent(dateStr);
+    var url = GAS_URL + "?action=update&date=" + encodeURIComponent(dateStr);
     jsonpLoad({
-      url,
+      url: url,
       callbackName: 'handleGASUpdate',
       id: 'jsonp-gas-update',
-      onError(err){
+      onError: function(err){
         console.error('[GAS] Error aplicando fecha:', err && err.message);
         alert('No se pudo contactar al servicio. Reintentá.');
       }
     });
   }
 
-  // ========= Bootstrap (UI + tabs + polling) =========
+  // ========= Bootstrap =========
   window.addEventListener('DOMContentLoaded', function(){
-    const inputFecha   = document.getElementById('inputFecha');
-    const btnAplicar   = document.getElementById('btnAplicarFecha');
-    const btnRefresh   = document.getElementById('btnRefresh');
-    const legendMicros = document.getElementById('legendMicros');
-    const tabs         = document.querySelectorAll('.tab');
+    var inputFecha   = document.getElementById('inputFecha');
+    var btnAplicar   = document.getElementById('btnAplicarFecha');
+    var btnRefresh   = document.getElementById('btnRefresh');
+    var legendMicros = document.getElementById('legendMicros');
+    var tabs         = document.querySelectorAll('.tab');
 
     btnAplicar.addEventListener('click', function(){
-      const val = inputFecha.value;
+      var val = inputFecha.value;
       if (!val) { alert("Seleccioná una fecha."); return; }
       updateA1(val);
     });
 
-    btnRefresh && btnRefresh.addEventListener('click', requestGAS);
+    if (btnRefresh) btnRefresh.addEventListener('click', requestGAS);
 
     // Tabs + leyenda solo en Arribos
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
+    tabs.forEach(function(tab){
+      tab.addEventListener('click', function(){
+        tabs.forEach(function(t){ t.classList.remove('active'); });
         tab.classList.add('active');
 
-        document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
-        const selected = tab.dataset.tab;
+        document.querySelectorAll('.card').forEach(function(c){ c.style.display = 'none'; });
+        var selected = tab.dataset.tab;
         document.getElementById('card' + selected.charAt(0).toUpperCase() + selected.slice(1)).style.display = '';
 
         legendMicros.style.display = (selected === 'arribos') ? 'flex' : 'none';
