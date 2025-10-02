@@ -8,18 +8,33 @@
   <meta http-equiv="Expires" content="0" />
   <title>Briefing — Arribos & Salidas</title>
   <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .controls{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+    .date-input{padding:8px;border:1px solid var(--border);border-radius:10px}
+    .apply-btn{background:#111;color:#fff;border:0;padding:8px 14px;border-radius:10px;font-weight:600;cursor:pointer}
+
+    /* Leyenda y pintado del vuelo (MICROS) */
+    .legend{display:none;gap:12px;align-items:center;justify-content:center;font-size:.9rem;margin-top:6px}
+    .legend .sw{display:inline-block;width:16px;height:16px;border-radius:4px;border:1px solid var(--border);margin-right:6px;vertical-align:middle}
+    .legend .micro{background:rgba(139,92,246,.16);border-color:rgba(139,92,246,.35)}
+    .micro-cell{background:rgba(139,92,246,.16);border:1px solid rgba(139,92,246,.35);border-radius:6px;padding:4px 8px;font-weight:700}
+  </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="brand">
       <img src="assets/logo.png" class="logo" alt="logo">
-      <div>
-        <h1>Briefing — Arribos & Salidas</h1>
-      </div>
+      <div><h1>Briefing — Arribos & Salidas</h1></div>
     </div>
     <div class="controls">
+      <input type="date" id="inputFecha" class="date-input" />
+      <button class="apply-btn" id="btnAplicarFecha">Aplicar fecha</button>
       <button class="refresh-btn" id="btnRefresh">Actualizar</button>
+    </div>
+    <!-- Leyenda: visible solo en Arribos -->
+    <div class="legend" id="legendMicros">
+      <span><span class="sw micro"></span>vuelo pintado requiere traslado de pasajeros ato-ato</span>
     </div>
   </header>
 
@@ -56,57 +71,72 @@
   </div>
 </div>
 
-<!-- Tu app de UI -->
 <script src="js/app.js" defer></script>
 
-<!-- JSONP para evitar CORS (robusto para móvil) -->
 <script>
-  // callback global que el Apps Script invoca: tu app.js lo consume si ya está cargado
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxhNByp7sqrxfyMDddqV6O9OsGmqIzEcfrn49TcYN9qUettWe4iETKaNems1WWrtMi8/exec";
+
   function handleGASData(rows){
     window.__GAS_ROWS__ = rows || [];
     if (window.__loadFromJSONP) window.__loadFromJSONP(window.__GAS_ROWS__);
   }
-</script>
-<script>
-  (function(){
-    // Usá SIEMPRE la URL /exec pública de tu implementación
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzr8D4fe4eWYsbR-q62dWDqZVjsctso2jMoH874nsLNtLwi1wsw_04ye_KtA4fwW13hgw/exec";
 
-    let tries = 0, maxTries = 3, loaded = false;
-
-    // Aviso liviano (visible en móvil si hay problemas de red)
-    const note = document.createElement('div');
-    note.id = "net-note";
-    note.style.cssText = "margin:8px 0;padding:8px;text-align:center;font-size:.9rem;color:#444;display:none;";
-    document.body.appendChild(note);
-
-    function inject(){
-      tries++;
-      note.style.display = "";
-      note.textContent = "Cargando datos… (intento " + tries + "/" + maxTries + ")";
-      const s = document.createElement('script');
-      s.async = true;
-      // cache-buster para evitar versiones cacheadas en celular
-      s.src = GAS_URL + "?callback=handleGASData&_ts=" + Date.now();
-      s.onerror = () => {
-        if (!loaded && tries < maxTries) {
-          setTimeout(inject, 900);
-        } else if (!loaded) {
-          note.textContent = "No pude cargar datos. Verificá que el Web App esté público (Cualquiera con el enlace) y recargá.";
-        }
-      };
-      s.onload = () => {
-        loaded = true;
-        note.style.display = "none";
-      };
-      document.body.appendChild(s);
+  function handleGASUpdate(res){
+    if (res && res.ok) {
+      alert("Fecha aplicada en A1: " + (res.set || ""));
+      requestGAS();
+    } else {
+      alert("No se pudo aplicar la fecha" + (res && res.error ? " ("+res.error+")" : ""));
     }
+  }
 
-    // 3 intentos espaciados para cubrir redes móviles inestables
-    inject();
-    setTimeout(() => { if (!loaded && tries < maxTries) inject(); }, 2000);
-    setTimeout(() => { if (!loaded && tries < maxTries) inject(); }, 4000);
-  })();
+  function requestGAS(){
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = GAS_URL + "?callback=handleGASData&_ts=" + Date.now();
+    document.body.appendChild(s);
+  }
+
+  function updateA1(dateStr){
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = GAS_URL + "?action=update&date=" + encodeURIComponent(dateStr) + "&callback=handleGASUpdate&_ts=" + Date.now();
+    document.body.appendChild(s);
+  }
+
+  window.addEventListener('DOMContentLoaded', function(){
+    const inputFecha = document.getElementById('inputFecha');
+    const btnAplicar = document.getElementById('btnAplicarFecha');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const legendMicros = document.getElementById('legendMicros');
+    const tabs = document.querySelectorAll('.tab');
+
+    btnAplicar.addEventListener('click', function(){
+      const val = inputFecha.value;
+      if (!val) { alert("Seleccioná una fecha."); return; }
+      updateA1(val);
+    });
+
+    btnRefresh?.addEventListener('click', requestGAS);
+
+    // Toggle de pestañas y leyenda
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
+        const selected = tab.dataset.tab;
+        document.getElementById('card' + selected.charAt(0).toUpperCase() + selected.slice(1)).style.display = '';
+
+        // Mostrar leyenda solo en Arribos
+        legendMicros.style.display = (selected === 'arribos') ? 'flex' : 'none';
+      });
+    });
+
+    requestGAS();
+    setInterval(requestGAS, 120000);
+  });
 </script>
 </body>
 </html>
