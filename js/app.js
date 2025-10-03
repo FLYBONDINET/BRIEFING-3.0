@@ -183,15 +183,15 @@ function cellDelayMinutes(r){
   const cls = classifyPush(initial) === 'ok' ? 'delaymins-ok' : 'delaymins-warn';
 
   return `
-    <div class="delaymins-cell" data-id="${id}">
-      <input type="number" class="delaymins-input ${cls}" step="1" min="-999" max="999"
-             value="${initial}" placeholder="PUSH..."
-             data-vuelo="${vuelo}" data-etd="${etd}"
-             oninput="liveColorPush(this)">
-      <button class="delaymins-save" onclick="saveDelayMinutes(this)">Guardar</button>
-    </div>
-  `;
-}
+  <div class="delaymins-cell" data-id="${id}">
+    <input type="tel" pattern="-?[0-9]*"
+           class="delaymins-input ${cls}"
+           value="${initial}" placeholder="PUSH..."
+           data-vuelo="${vuelo}" data-etd="${etd}"
+           oninput="liveColorPush(this)">
+    <button class="delaymins-save" onclick="saveDelayMinutes(this)">Guardar</button>
+  </div>
+`;
 
 /* Color en vivo al tipear */
 window.liveColorPush = function(input){
