@@ -192,7 +192,7 @@ function cellDelayMinutes(r){
     <button class="delaymins-save" onclick="saveDelayMinutes(this)">Guardar</button>
   </div>
 `;
-
+}
 /* Color en vivo al tipear */
 window.liveColorPush = function(input){
   const v = input.value.trim();
